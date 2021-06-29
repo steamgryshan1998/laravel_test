@@ -1,26 +1,39 @@
 <?php
 
-
 namespace App\Models;
-
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-//use Illuminate\Database\Eloquent\ModelNotFoundException;
-//use Illuminate\Support\Facades\File;
-//use Illuminate\Support\Facades\Request;
-//use Spatie\YamlFrontMatter\YamlFrontMatter;
 
 class Post extends Model
 {
     use HasFactory;
-    protected $fillable = ['category_id', 'slug','title', 'excerpt', 'body']; // $guard - не позволяет менять значение выбранного поля в свободном порядке, fillable - позволяет
-    public function getRouteKeyName()
-    {
-        return 'slug';
-    }
+
+    protected $guarded = [];
 
     protected $with = ['category', 'author'];
+
+    public function scopeFilter($query, array $filters)
+    {
+        $query->when($filters['search'] ?? false, fn($query, $search) =>
+            $query->where(fn($query) =>
+                $query->where('title', 'like', '%' . $search . '%')
+                    ->orWhere('body', 'like', '%' . $search . '%')
+            )
+        );
+
+        $query->when($filters['category'] ?? false, fn($query, $category) =>
+            $query->whereHas('category', fn ($query) =>
+                $query->where('slug', $category)
+            )
+        );
+
+        $query->when($filters['author'] ?? false, fn($query, $author) =>
+            $query->whereHas('author', fn ($query) =>
+                $query->where('username', $author)
+            )
+        );
+    }
 
     public function category()
     {
@@ -33,6 +46,11 @@ class Post extends Model
     }
 }
 /*class Post
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Request;
+use Spatie\YamlFrontMatter\YamlFrontMatter;
+
 {
     public $title;
 
